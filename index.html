@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>Retry Backoff Calculator - Exponential Backoff and Jitter Visualizer</title>
+<meta name="description" content="Visualize exponential backoff with jitter for API retry logic. Enter attempts, base delay, multiplier, and cap to get a per-attempt delay table, worst-case wait, and a copyable JavaScript snippet.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="canonical" href="https://0xelitesystem.github.io/retry-backoff-calculator/">
+<meta property="og:title" content="Retry Backoff Calculator - Exponential Backoff and Jitter Visualizer">
+<meta property="og:description" content="Visualize exponential backoff with jitter for API retry logic. Per-attempt delay table, worst-case wait, and a copyable JavaScript snippet.">
+<meta property="og:url" content="https://0xelitesystem.github.io/retry-backoff-calculator/">
+<meta property="og:type" content="website">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Retry Backoff Calculator",
+  "description": "Visualize exponential backoff with jitter for API retry logic. Enter attempts, base delay, multiplier, and cap to get a per-attempt delay table, worst-case wait, and a copyable JavaScript snippet.",
+  "url": "https://0xelitesystem.github.io/retry-backoff-calculator/",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": 0, "priceCurrency": "USD" }
+}
+</script>
+<style>
+  :root {
+    --mono: ui-monospace, "Cascadia Code", Consolas, "Segoe UI Mono", Menlo, monospace;
+    --sans: "Segoe UI", "Avenir Next", Seravek, Corbel, system-ui, sans-serif;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0e1014;
+    --surface: #14161c;
+    --surface-2: #191c24;
+    --ink: #e9e6df;
+    --ink-2: #a8a49a;
+    --muted: #737067;
+    --line: #272b34;
+    --accent: #cc7f22;
+    --accent-text: #e0a355;
+    --accent-soft: rgba(204, 127, 34, 0.30);
+    --accent-faint: rgba(204, 127, 34, 0.10);
+    --glow: rgba(204, 127, 34, 0.07);
+  }
+  :root[data-theme="light"] {
+    --bg: #efece5;
+    --surface: #f6f4ef;
+    --surface-2: #ece8e0;
+    --ink: #221f19;
+    --ink-2: #57544c;
+    --muted: #85816f;
+    --line: #d9d4c8;
+    --accent: #b45309;
+    --accent-text: #9a4e06;
+    --accent-soft: rgba(180, 83, 9, 0.26);
+    --accent-faint: rgba(180, 83, 9, 0.08);
+    --glow: rgba(180, 83, 9, 0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    background-image:
+      radial-gradient(60rem 24rem at 70% -8rem, var(--glow), transparent 70%),
+      repeating-linear-gradient(0deg, transparent 0 47px, var(--accent-faint) 47px 48px);
+    color: var(--ink);
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 1020px; margin: 0 auto; padding: 0 20px 48px; }
+
+  header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; padding: 28px 0 8px;
+  }
+  .brand { font-family: var(--mono); font-size: 1.05rem; color: var(--ink-2); letter-spacing: 0.02em; }
+  .brand b { color: var(--accent-text); font-weight: 600; }
+  #themeToggle {
+    font-family: var(--mono); font-size: 0.8rem;
+    background: var(--surface); color: var(--ink-2);
+    border: 1px solid var(--line); border-radius: 6px;
+    padding: 6px 12px; cursor: pointer;
+  }
+  #themeToggle:hover { color: var(--ink); border-color: var(--accent); }
+
+  h1 { font-family: var(--mono); font-size: clamp(1.5rem, 4.5vw, 2.3rem); font-weight: 700; letter-spacing: -0.01em; margin: 18px 0 6px; }
+  h1 .tick { color: var(--accent-text); }
+  .tagline { color: var(--ink-2); max-width: 62ch; margin-bottom: 26px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 18px;
+  }
+  .card h2 {
+    font-family: var(--mono); font-size: 0.8rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--muted); margin-bottom: 14px;
+  }
+
+  .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); gap: 14px; }
+  .field label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--ink-2); margin-bottom: 5px; }
+  .field input, .field select {
+    width: 100%; font-family: var(--mono); font-size: 0.95rem;
+    background: var(--bg); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 6px;
+    padding: 8px 10px;
+  }
+  .field input:focus-visible, .field select:focus-visible,
+  button:focus-visible, a:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  .field input:disabled { opacity: 0.45; cursor: not-allowed; }
+  .field .sub { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+  #hints { font-size: 0.8rem; color: var(--accent-text); margin-top: 12px; min-height: 0; }
+  #hints p { margin-top: 4px; }
+
+  .formula {
+    max-width: 100%;
+    margin-top: 16px; padding: 12px 14px;
+    background: var(--bg); border: 1px dashed var(--line); border-radius: 8px;
+    font-family: var(--mono); font-size: 0.82rem; color: var(--ink-2);
+    overflow-x: auto;
+  }
+  .formula .fl { white-space: pre; }
+  .formula b { color: var(--accent-text); font-weight: 600; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr)); gap: 14px; margin-bottom: 18px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 10px; padding: 16px 18px; }
+  .tile .t-label { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+  .tile .t-value { font-family: var(--mono); font-size: 1.55rem; font-weight: 700; margin: 4px 0 2px; }
+  .tile .t-raw { font-family: var(--mono); font-size: 0.75rem; color: var(--ink-2); }
+
+  .chart-note { font-size: 0.78rem; color: var(--muted); margin-bottom: 14px; }
+  .chart-note .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: -1px; margin-right: 3px; }
+  .sw-solid { background: var(--accent); }
+  .sw-stripe { background: repeating-linear-gradient(135deg, var(--accent-soft) 0 3px, transparent 3px 5px); border: 1px solid var(--accent-soft); }
+  .bar-row {
+    display: grid; grid-template-columns: 2.4rem 1fr minmax(4.5rem, auto);
+    align-items: center; gap: 10px; padding: 3px 4px; border-radius: 6px;
+  }
+  .bar-row:hover { background: var(--accent-faint); }
+  .bar-n { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); text-align: right; }
+  .bar-track { position: relative; height: 18px; background: var(--surface-2); border-radius: 4px; }
+  .bar-range {
+    position: absolute; inset: 0 auto 0 0; min-width: 2px;
+    background: repeating-linear-gradient(135deg, var(--accent-soft) 0 6px, transparent 6px 10px);
+    border-radius: 2px 4px 4px 2px;
+    box-shadow: inset 0 0 0 1px var(--accent-soft);
+  }
+  .bar-min { position: absolute; inset: 0 auto 0 0; background: var(--accent); border-radius: 2px 0 0 2px; }
+  .bar-min.cap-full { border-radius: 2px 4px 4px 2px; }
+  .bar-val { font-family: var(--mono); font-size: 0.78rem; color: var(--ink); text-align: right; white-space: nowrap; }
+
+  .table-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.84rem; }
+  th, td { padding: 7px 12px; text-align: right; white-space: nowrap; }
+  th {
+    font-family: var(--mono); font-size: 0.7rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+    border-bottom: 1px solid var(--line);
+  }
+  td { font-family: var(--mono); border-bottom: 1px solid var(--line); color: var(--ink-2); }
+  td:first-child, th:first-child { text-align: left; }
+  td.hi { color: var(--ink); font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--accent-faint); }
+  .foot-note { font-size: 0.74rem; color: var(--muted); margin-top: 10px; }
+
+  .snippet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .snippet-head h2 { margin-bottom: 0; }
+  .copy-btn {
+    font-family: var(--mono); font-size: 0.78rem; font-weight: 600;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 6px; padding: 7px 14px; cursor: pointer;
+  }
+  .copy-btn:hover { filter: brightness(1.1); }
+  .copy-btn.copied { background: var(--surface-2); color: var(--accent-text); box-shadow: inset 0 0 0 1px var(--accent); }
+  pre {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 16px; overflow-x: auto; max-width: 100%;
+    font-family: var(--mono); font-size: 0.8rem; line-height: 1.6; color: var(--ink);
+    tab-size: 2;
+  }
+
+  .explain h3 { font-family: var(--mono); font-size: 0.95rem; color: var(--accent-text); margin: 18px 0 6px; }
+  .explain h3:first-of-type { margin-top: 0; }
+  .explain p { color: var(--ink-2); font-size: 0.92rem; max-width: 74ch; }
+  .explain a { color: var(--accent-text); overflow-wrap: anywhere; }
+
+  footer {
+    border-top: 1px solid var(--line); margin-top: 30px; padding-top: 18px;
+    font-size: 0.8rem; color: var(--muted);
+    display: flex; flex-wrap: wrap; gap: 6px 18px; justify-content: space-between;
+  }
+  footer a { color: var(--accent-text); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 460px) {
+    .card { padding: 14px; }
+    .bar-row { grid-template-columns: 1.6rem 1fr minmax(3.6rem, auto); gap: 6px; }
+    .tile .t-value { font-size: 1.25rem; }
+  }
+</style>
+<script>
+  (function () {
+    var t = "dark";
+    try { t = localStorage.getItem("rbc-theme") || "dark"; } catch (e) {}
+    document.documentElement.setAttribute("data-theme", t === "light" ? "light" : "dark");
+  })();
+</script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="brand">~/<b>retry-backoff-calculator</b></span>
+    <button id="themeToggle" type="button" aria-pressed="false">Light mode</button>
+  </header>
+
+  <h1><span class="tick">&gt;</span> Retry Backoff Calculator</h1>
+  <p class="tagline">
+    Visualize exponential backoff with jitter for API retry logic. Tune attempts, base delay,
+    multiplier, cap, and jitter strategy; get a per-attempt delay table, the total worst-case
+    wait, and a copyable JavaScript implementation. No external dependencies, everything runs
+    in your browser.
+  </p>
+
+  <section class="card" aria-label="Inputs">
+    <h2>Inputs</h2>
+    <div class="controls">
+      <div class="field">
+        <label for="attempts">Max attempts</label>
+        <input id="attempts" type="number" inputmode="numeric" min="1" max="20" step="1" value="6">
+        <div class="sub">1 to 20</div>
+      </div>
+      <div class="field">
+        <label for="base">Base delay (ms)</label>
+        <input id="base" type="number" inputmode="numeric" min="1" max="3600000" step="1" value="250">
+        <div class="sub">must be at least 1</div>
+      </div>
+      <div class="field">
+        <label for="mult">Multiplier</label>
+        <input id="mult" type="number" inputmode="decimal" min="1" max="10" step="0.1" value="2">
+        <div class="sub" id="multSub">growth per attempt</div>
+      </div>
+      <div class="field">
+        <label for="cap">Max delay cap (ms)</label>
+        <input id="cap" type="number" inputmode="numeric" min="1" max="3600000" step="1" value="30000">
+        <div class="sub">upper bound per sleep</div>
+      </div>
+      <div class="field">
+        <label for="jitter">Jitter strategy</label>
+        <select id="jitter">
+          <option value="none">None</option>
+          <option value="full" selected>Full jitter</option>
+          <option value="equal">Equal jitter</option>
+          <option value="decorrelated">Decorrelated jitter</option>
+        </select>
+        <div class="sub">how sleeps are randomized</div>
+      </div>
+    </div>
+    <div id="hints" aria-live="polite"></div>
+    <div class="formula" id="formulaBox" aria-label="The math being used"></div>
+  </section>
+
+  <div class="tiles" aria-label="Summary">
+    <div class="tile">
+      <div class="t-label">Worst-case total wait</div>
+      <div class="t-value" id="tileWorst">-</div>
+      <div class="t-raw" id="tileWorstRaw"></div>
+    </div>
+    <div class="tile">
+      <div class="t-label">Expected total wait</div>
+      <div class="t-value" id="tileExpected">-</div>
+      <div class="t-raw" id="tileExpectedRaw"></div>
+    </div>
+    <div class="tile">
+      <div class="t-label">Final attempt max delay</div>
+      <div class="t-value" id="tileFinal">-</div>
+      <div class="t-raw" id="tileFinalRaw"></div>
+    </div>
+  </div>
+
+  <section class="card" aria-label="Per-attempt chart">
+    <h2>Sleep range per attempt</h2>
+    <p class="chart-note">
+      Bars are scaled to the largest max sleep. <span class="sw sw-solid"></span>solid = guaranteed
+      minimum, <span class="sw sw-stripe"></span>striped = random jitter range up to the max.
+      Each bar is labeled with its max sleep; hover for exact numbers.
+    </p>
+    <div id="chart" role="img" aria-label="Horizontal bar chart of per-attempt sleep ranges. The table below holds the same data."></div>
+  </section>
+
+  <section class="card" aria-label="Per-attempt table">
+    <h2>Delay table</h2>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Attempt</th>
+            <th scope="col">Raw delay (ms)</th>
+            <th scope="col">Min sleep (ms)</th>
+            <th scope="col">Expected (ms)</th>
+            <th scope="col">Max sleep (ms)</th>
+            <th scope="col">Cumulative worst case</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+    <p class="foot-note" id="tableNote"></p>
+  </section>
+
+  <section class="card" aria-label="Code snippet">
+    <div class="snippet-head">
+      <h2>JavaScript snippet (current settings)</h2>
+      <button class="copy-btn" id="copyBtn" type="button">Copy</button>
+    </div>
+    <pre><code id="snippet"></code></pre>
+  </section>
+
+  <section class="card explain" aria-label="Explainer">
+    <h2>Why this matters</h2>
+    <h3>Why retry storms happen</h3>
+    <p>
+      When a service blips, every client that got an error retries. If they all retry on the
+      same fixed schedule, the original burst of traffic replays as synchronized waves. Each
+      wave slams into a service that is already struggling, so the wave fails too, and the
+      retries themselves keep the service down. That feedback loop is a retry storm.
+    </p>
+    <h3>Why jitter prevents the thundering herd</h3>
+    <p>
+      Exponential backoff spreads the waves further apart in time, but it keeps clients
+      synchronized: everyone who failed at the same moment comes back at the same instants.
+      Jitter adds randomness so retries land spread across the whole window instead of
+      stampeding at once. Full jitter, popularized by the AWS Architecture Blog analysis,
+      tends to reduce contention and total completed work the most; equal jitter trades some
+      of that spread for a guaranteed minimum wait; decorrelated jitter randomizes based on
+      the previous sleep instead of the attempt number.
+    </p>
+    <h3>Why you cap the delay</h3>
+    <p>
+      Without a cap, a multiplier of 2 turns a 250 ms base into over four minutes of sleep by
+      attempt 11. A cap keeps worst-case latency bounded, so callers time out predictably and
+      request queues do not back up behind one very patient client. Pick the cap from your
+      caller's timeout budget, not from the math.
+    </p>
+    <h3>Retries are only safe on idempotent operations</h3>
+    <p>
+      A retry re-runs the operation. That is only safe when running it twice has the same
+      effect as running it once: reads, upserts keyed by a client-generated id, or writes
+      guarded by an idempotency key. Blindly retrying a "charge the card" or "send the email"
+      call can double the side effect. This calculator pairs with
+      <a href="https://github.com/0xelitesystem/idempotency-and-safe-retries-reference">idempotency-and-safe-retries-reference</a>
+      in the same portfolio, which covers how to make operations safe to retry in the first place.
+    </p>
+  </section>
+
+  <footer>
+    <span>An <a href="https://elitesystem.ai">elitesystem.ai</a> tool. No external dependencies; nothing leaves your browser.</span>
+    <a href="https://github.com/0xelitesystem/retry-backoff-calculator">Source on GitHub</a>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var $ = function (id) { return document.getElementById(id); };
+  var els = {
+    attempts: $("attempts"), base: $("base"), mult: $("mult"),
+    cap: $("cap"), jitter: $("jitter"), hints: $("hints"),
+    formulaBox: $("formulaBox"), chart: $("chart"), tableBody: $("tableBody"),
+    tableNote: $("tableNote"), snippet: $("snippet"), copyBtn: $("copyBtn"),
+    tileWorst: $("tileWorst"), tileWorstRaw: $("tileWorstRaw"),
+    tileExpected: $("tileExpected"), tileExpectedRaw: $("tileExpectedRaw"),
+    tileFinal: $("tileFinal"), tileFinalRaw: $("tileFinalRaw"),
+    themeToggle: $("themeToggle"), multSub: $("multSub")
+  };
+
+  // ---------- theme ----------
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    els.themeToggle.textContent = theme === "dark" ? "Light mode" : "Dark mode";
+    els.themeToggle.setAttribute("aria-pressed", theme === "light" ? "true" : "false");
+    try { localStorage.setItem("rbc-theme", theme); } catch (e) {}
+  }
+  els.themeToggle.addEventListener("click", function () {
+    var cur = document.documentElement.getAttribute("data-theme");
+    applyTheme(cur === "dark" ? "light" : "dark");
+  });
+  applyTheme(document.documentElement.getAttribute("data-theme") || "dark");
+
+  // ---------- parsing + validation ----------
+  function clampNum(raw, lo, hi, fallback, integer) {
+    var v = parseFloat(raw);
+    if (!isFinite(v)) return { value: fallback, note: "empty or invalid, using " + fallback };
+    if (integer) v = Math.round(v);
+    if (v < lo) return { value: lo, note: "clamped up to " + lo };
+    if (v > hi) return { value: hi, note: "clamped down to " + hi.toLocaleString("en-US") };
+    return { value: v, note: null };
+  }
+
+  function readConfig() {
+    var notes = [];
+    var a = clampNum(els.attempts.value, 1, 20, 6, true);
+    var b = clampNum(els.base.value, 1, 3600000, 250, false);
+    var m = clampNum(els.mult.value, 1, 10, 2, false);
+    var c = clampNum(els.cap.value, 1, 3600000, 30000, false);
+    if (a.note) notes.push("Max attempts: " + a.note + ".");
+    if (b.note) notes.push("Base delay: " + b.note + " ms (base must be positive).");
+    if (m.note) notes.push("Multiplier: " + m.note + ".");
+    if (c.note) notes.push("Cap: " + c.note + " ms.");
+    if (c.value < b.value) notes.push("Cap is below the base delay, so every sleep is capped at " + c.value.toLocaleString("en-US") + " ms.");
+    els.hints.innerHTML = notes.map(function (n) {
+      return "<p>" + n + "</p>";
+    }).join("");
+    return {
+      attempts: a.value, base: b.value, mult: m.value,
+      cap: c.value, jitter: els.jitter.value
+    };
+  }
+
+  function normalizeFields() {
+    var cfg = readConfig();
+    els.attempts.value = cfg.attempts;
+    els.base.value = cfg.base;
+    els.mult.value = cfg.mult;
+    els.cap.value = cfg.cap;
+  }
+
+  // ---------- math ----------
+  // raw delay for attempt n = min(cap, base * multiplier^(n-1))
+  // none:         sleep = raw
+  // full jitter:  sleep = random(0, raw)
+  // equal jitter: sleep = raw/2 + random(0, raw/2)
+  // decorrelated: sleep = min(cap, random(base, prev_sleep * 3)), prev_sleep seeded with base
+  function compute(cfg) {
+    var rows = [];
+    var cumWorst = 0, cumExp = 0;
+    var maxPrev = cfg.base;  // worst-case walk for decorrelated
+    var expPrev = cfg.base;  // expected-value walk for decorrelated
+    for (var n = 1; n <= cfg.attempts; n++) {
+      var raw = Math.min(cfg.cap, cfg.base * Math.pow(cfg.mult, n - 1));
+      var min, max, exp;
+      if (cfg.jitter === "none") {
+        min = raw; max = raw; exp = raw;
+      } else if (cfg.jitter === "full") {
+        min = 0; max = raw; exp = raw / 2;
+      } else if (cfg.jitter === "equal") {
+        min = raw / 2; max = raw; exp = raw * 0.75;
+      } else { // decorrelated
+        min = Math.min(cfg.cap, cfg.base);
+        max = Math.min(cfg.cap, maxPrev * 3);
+        exp = Math.min(cfg.cap, (cfg.base + 3 * expPrev) / 2);
+        maxPrev = max;
+        expPrev = exp;
+      }
+      cumWorst += max;
+      cumExp += exp;
+      rows.push({ n: n, raw: raw, min: min, max: max, exp: exp, cumWorst: cumWorst });
+    }
+    return { rows: rows, cumWorst: cumWorst, cumExp: cumExp };
+  }
+
+  // ---------- formatting ----------
+  function fmtMs(v) {
+    var r = Math.round(v * 10) / 10;
+    return r.toLocaleString("en-US", { maximumFractionDigits: 1 });
+  }
+  function human(ms) {
+    if (!isFinite(ms)) return "-";
+    if (ms < 1000) {
+      return (ms < 10 ? Math.round(ms * 10) / 10 : Math.round(ms)) + " ms";
+    }
+    if (ms < 60000) {
+      var s = ms / 1000;
+      return +(s.toFixed(s < 10 ? 2 : 1)) + " s";
+    }
+    if (ms < 3600000) {
+      var mm = Math.floor(ms / 60000);
+      var ss = Math.round((ms % 60000) / 1000);
+      if (ss === 60) { mm += 1; ss = 0; }
+      return ss === 0 ? mm + " min" : mm + " min " + ss + " s";
+    }
+    var h = Math.floor(ms / 3600000);
+    var m2 = Math.round((ms % 3600000) / 60000);
+    if (m2 === 60) { h += 1; m2 = 0; }
+    return m2 === 0 ? h + " h" : h + " h " + m2 + " min";
+  }
+
+  // ---------- rendering ----------
+  var FORMULAS = {
+    none: "sleep(n) = raw(n)",
+    full: "sleep(n) = random(0, raw(n))",
+    equal: "sleep(n) = raw(n)/2 + random(0, raw(n)/2)",
+    decorrelated: "sleep(n) = min(cap, random(base, prev_sleep * 3)), prev_sleep starts at base"
+  };
+  var JITTER_LABELS = {
+    none: "no jitter", full: "full jitter", equal: "equal jitter", decorrelated: "decorrelated jitter"
+  };
+
+  function renderFormula(cfg) {
+    var lines = [];
+    if (cfg.jitter === "decorrelated") {
+      lines.push('<div class="fl"><b>sleep(n)</b> = min(cap, random(base, prev_sleep * 3))</div>');
+      lines.push('<div class="fl">prev_sleep starts at base; the multiplier input is not used</div>');
+    } else {
+      lines.push('<div class="fl"><b>raw(n)</b>   = min(cap, base * multiplier^(n-1))</div>');
+      lines.push('<div class="fl"><b>sleep(n)</b> = ' + FORMULAS[cfg.jitter].replace("sleep(n) = ", "") + "</div>");
+    }
+    els.formulaBox.innerHTML = lines.join("");
+  }
+
+  function renderTiles(res, cfg) {
+    var finalMax = res.rows.length ? res.rows[res.rows.length - 1].max : 0;
+    els.tileWorst.textContent = human(res.cumWorst);
+    els.tileWorstRaw.textContent = fmtMs(res.cumWorst) + " ms across " + cfg.attempts + " attempt" + (cfg.attempts === 1 ? "" : "s");
+    els.tileExpected.textContent = human(res.cumExp);
+    els.tileExpectedRaw.textContent = fmtMs(res.cumExp) + " ms (analytic mean)";
+    els.tileFinal.textContent = human(finalMax);
+    els.tileFinalRaw.textContent = fmtMs(finalMax) + " ms on attempt " + cfg.attempts;
+  }
+
+  function renderChart(res) {
+    var maxVal = 1;
+    var i;
+    for (i = 0; i < res.rows.length; i++) {
+      if (res.rows[i].max > maxVal) maxVal = res.rows[i].max;
+    }
+    var html = "";
+    for (i = 0; i < res.rows.length; i++) {
+      var r = res.rows[i];
+      var maxPct = (r.max / maxVal) * 100;
+      var minFrac = r.max > 0 ? (r.min / r.max) * 100 : 0;
+      var title = "Attempt " + r.n + ": min " + fmtMs(r.min) + " ms, expected " +
+        fmtMs(r.exp) + " ms, max " + fmtMs(r.max) + " ms";
+      var minDiv = "";
+      if (r.min > 0) {
+        var fullCls = minFrac >= 99.9 ? " cap-full" : "";
+        minDiv = '<div class="bar-min' + fullCls + '" style="width:' + minFrac.toFixed(2) + '%"></div>';
+      }
+      html +=
+        '<div class="bar-row" title="' + title + '">' +
+          '<span class="bar-n">' + r.n + "</span>" +
+          '<div class="bar-track">' +
+            '<div class="bar-range" style="width:' + maxPct.toFixed(2) + '%">' + minDiv + "</div>" +
+          "</div>" +
+          '<span class="bar-val">' + human(r.max) + "</span>" +
+        "</div>";
+    }
+    els.chart.innerHTML = html;
+    els.chart.setAttribute("aria-label",
+      "Horizontal bar chart of per-attempt sleep ranges, largest max sleep " +
+      human(maxVal) + ". The table below holds the same data.");
+  }
+
+  function renderTable(res, cfg) {
+    var html = "";
+    for (var i = 0; i < res.rows.length; i++) {
+      var r = res.rows[i];
+      var rawCell = cfg.jitter === "decorrelated" ? "-" : fmtMs(r.raw);
+      html +=
+        "<tr>" +
+          "<td>" + r.n + "</td>" +
+          "<td>" + rawCell + "</td>" +
+          "<td>" + fmtMs(r.min) + "</td>" +
+          "<td>" + fmtMs(r.exp) + "</td>" +
+          '<td class="hi">' + fmtMs(r.max) + "</td>" +
+          "<td>" + fmtMs(r.cumWorst) + " ms (" + human(r.cumWorst) + ")</td>" +
+        "</tr>";
+    }
+    els.tableBody.innerHTML = html;
+    var note = "Cumulative worst case counts sleep time only; the time each request itself takes is not included.";
+    if (cfg.jitter === "decorrelated") {
+      note += " Decorrelated jitter grows from prev_sleep * 3, so the raw exponential ladder and the multiplier do not apply; its expected column is the mean of the capped recursion (an approximation).";
+    }
+    els.tableNote.textContent = note;
+  }
+
+  // ---------- code snippet ----------
+  function buildSnippet(cfg) {
+    var L = [];
+    L.push("// Exponential backoff with " + JITTER_LABELS[cfg.jitter]);
+    if (cfg.jitter === "decorrelated") {
+      L.push("// sleep = min(cap, random(base, prevSleep * 3)), prevSleep seeded with base");
+    } else {
+      L.push("// raw(n) = min(cap, base * multiplier^(n-1))");
+    }
+    L.push("const BASE_MS = " + cfg.base + ";");
+    if (cfg.jitter !== "decorrelated") {
+      L.push("const MULTIPLIER = " + cfg.mult + ";");
+    }
+    L.push("const CAP_MS = " + cfg.cap + ";");
+    L.push("const MAX_ATTEMPTS = " + cfg.attempts + ";");
+    L.push("");
+    if (cfg.jitter === "none") {
+      L.push("function backoffDelay(attempt) {");
+      L.push("  // attempt is 1-based; no jitter: every client sleeps the same amount");
+      L.push("  return Math.min(CAP_MS, BASE_MS * Math.pow(MULTIPLIER, attempt - 1));");
+      L.push("}");
+    } else if (cfg.jitter === "full") {
+      L.push("function backoffDelay(attempt) {");
+      L.push("  // attempt is 1-based; full jitter: sleep = random(0, raw)");
+      L.push("  const raw = Math.min(CAP_MS, BASE_MS * Math.pow(MULTIPLIER, attempt - 1));");
+      L.push("  return Math.random() * raw;");
+      L.push("}");
+    } else if (cfg.jitter === "equal") {
+      L.push("function backoffDelay(attempt) {");
+      L.push("  // attempt is 1-based; equal jitter: sleep = raw/2 + random(0, raw/2)");
+      L.push("  const raw = Math.min(CAP_MS, BASE_MS * Math.pow(MULTIPLIER, attempt - 1));");
+      L.push("  return raw / 2 + Math.random() * (raw / 2);");
+      L.push("}");
+    } else {
+      L.push("let prevSleep = BASE_MS; // seeded with the base delay");
+      L.push("");
+      L.push("function backoffDelay() {");
+      L.push("  // decorrelated jitter: sleep = min(cap, random(base, prevSleep * 3))");
+      L.push("  const next = BASE_MS + Math.random() * (prevSleep * 3 - BASE_MS);");
+      L.push("  prevSleep = Math.min(CAP_MS, next);");
+      L.push("  return prevSleep;");
+      L.push("}");
+    }
+    L.push("");
+    L.push("async function withRetries(fn) {");
+    L.push("  // Only retry idempotent operations (safe to run more than once).");
+    L.push("  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {");
+    L.push("    try {");
+    L.push("      return await fn();");
+    L.push("    } catch (err) {");
+    L.push("      if (attempt === MAX_ATTEMPTS) throw err;");
+    L.push("      await new Promise((resolve) => setTimeout(resolve, backoffDelay(attempt)));");
+    L.push("    }");
+    L.push("  }");
+    L.push("}");
+    return L.join("\n");
+  }
+
+  els.copyBtn.addEventListener("click", function () {
+    var text = els.snippet.textContent;
+    var btn = els.copyBtn;
+    function done(ok) {
+      btn.textContent = ok ? "Copied" : "Copy failed";
+      btn.classList.add("copied");
+      setTimeout(function () {
+        btn.textContent = "Copy";
+        btn.classList.remove("copied");
+      }, 1400);
+    }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+      done(ok);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, fallback);
+    } else {
+      fallback();
+    }
+  });
+
+  // ---------- main ----------
+  function render() {
+    var cfg = readConfig();
+    var isDecor = cfg.jitter === "decorrelated";
+    els.mult.disabled = isDecor;
+    els.multSub.textContent = isDecor ? "not used by decorrelated jitter" : "growth per attempt";
+    var res = compute(cfg);
+    renderFormula(cfg);
+    renderTiles(res, cfg);
+    renderChart(res);
+    renderTable(res, cfg);
+    els.snippet.textContent = buildSnippet(cfg);
+  }
+
+  ["attempts", "base", "mult", "cap"].forEach(function (id) {
+    els[id].addEventListener("input", render);
+    els[id].addEventListener("change", function () { normalizeFields(); render(); });
+  });
+  els.jitter.addEventListener("change", render);
+
+  render();
+})();
+</script>
+</body>
+</html>
