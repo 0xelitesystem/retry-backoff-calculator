@@ -28,6 +28,10 @@ The raw delay for attempt n is `min(cap, base * multiplier^(n-1))`. The jitter s
 
 Everything runs in your browser. Nothing is uploaded or sent anywhere; there are no analytics, no cookies, and no network requests. The only thing stored locally is your theme preference.
 
+## More
+
+Part of a catalog of single-file browser tools and plain-language references, all MIT licensed and dependency-free: [0xelitesystem.github.io](https://0xelitesystem.github.io/). Built by [elitesystem.ai](https://elitesystem.ai).
+
 ## License
 
 MIT
