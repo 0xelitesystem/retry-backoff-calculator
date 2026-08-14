@@ -20,6 +20,8 @@ https://0xelitesystem.github.io/retry-backoff-calculator/
 
 Pairs with [idempotency-and-safe-retries-reference](https://github.com/0xelitesystem/idempotency-and-safe-retries-reference) in the same portfolio, which covers how to make operations safe to retry in the first place.
 
+This page computes the delay schedule for a single client. It deliberately models no feedback: the delays it prints are the same whether the dependency is healthy or saturated. For the other half of the problem, where retries from many clients raise the failure rate that causes the retries, see [metastable-failure-explorer](https://0xelitesystem.github.io/metastable-failure-explorer/), which solves the amplification fixed point and shows why a system can stay collapsed after load returns to normal.
+
 ## How it works
 
 The raw delay for attempt n is `min(cap, base * multiplier^(n-1))`. The jitter strategy then decides the actual sleep: none uses the raw delay as-is, full jitter picks a random value between 0 and raw, equal jitter picks `raw/2` plus a random value up to `raw/2`, and decorrelated jitter picks `min(cap, random(base, prev_sleep * 3))` seeded with the base delay. The table and chart show the analytic min, max, and mean for each attempt (the decorrelated mean is the mean of the capped recursion, an approximation), and the worst-case total assumes every attempt sleeps its maximum. Everything is computed in plain JavaScript in the page.
