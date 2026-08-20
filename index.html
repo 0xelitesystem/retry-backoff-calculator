@@ -212,6 +212,35 @@
     document.documentElement.setAttribute("data-theme", t === "light" ? "light" : "dark");
   })();
 </script>
+<style>
+/* elitesystem brand tokens: chrome only, meaning preserved */
+:root, :root[data-theme="dark"] {
+  --accent: #d4ff3a;
+  --accent-soft: rgba(212,255,58,0.12);
+  --accent-text: #0a0a0a;
+  --bg: #0a0a0a;
+  --ink: #e8e8e3;
+  --ink-2: #a8a8a3;
+  --line: #1f1f1d;
+  --muted: #6e6e68;
+  --surface: #111110;
+  --surface-2: #161614;
+}
+:root[data-theme="light"] {
+  --accent: #2d6b00;
+  --accent-soft: rgba(45,107,0,0.08);
+  --accent-text: #ffffff;
+  --bg: #e8ebef;
+  --ink: #0a0a0a;
+  --ink-2: #2a2a27;
+  --line: #c8cdd5;
+  --muted: #6e6e68;
+  --surface: #dee2e8;
+  --surface-2: #d3d7df;
+}
+:root { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
+</style>
 </head>
 <body>
 <div class="wrap">
