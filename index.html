@@ -217,29 +217,31 @@
 :root, :root[data-theme="dark"] {
   --accent: #d4ff3a;
   --accent-soft: rgba(212,255,58,0.12);
-  --accent-text: #0a0a0a;
+  --accent-text: #d4ff3a;
   --bg: #0a0a0a;
   --ink: #e8e8e3;
   --ink-2: #a8a8a3;
   --line: #1f1f1d;
-  --muted: #6e6e68;
+  --muted: #898983;
   --surface: #111110;
   --surface-2: #161614;
 }
 :root[data-theme="light"] {
   --accent: #2d6b00;
   --accent-soft: rgba(45,107,0,0.08);
-  --accent-text: #ffffff;
+  --accent-text: #2d6b00;
   --bg: #e8ebef;
   --ink: #0a0a0a;
   --ink-2: #2a2a27;
   --line: #c8cdd5;
-  --muted: #6e6e68;
+  --muted: #5c5c56;
   --surface: #dee2e8;
   --surface-2: #d3d7df;
 }
 :root { color-scheme: dark; }
 :root[data-theme="light"] { color-scheme: light; }
+/* Text on the lime accent is #0a0a0a (WCAG 1.4.3). */
+:root:not([data-theme="light"]) .copy-btn:not(.copied) { color: #0a0a0a; }
 </style>
 </head>
 <body>
