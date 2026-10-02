@@ -2,9 +2,14 @@
 
 Visualize exponential backoff with jitter for API retry logic: per-attempt delay table, worst-case wait, bar chart, and a copyable JavaScript snippet.
 
-## Live demo
+**Live demo:** https://0xelitesystem.github.io/retry-backoff-calculator/
 
-https://0xelitesystem.github.io/retry-backoff-calculator/
+## Use
+
+1. Set max attempts, base delay, multiplier and max delay cap.
+2. Pick a jitter strategy: none, full, equal or decorrelated.
+3. Read the per-attempt delay table, the summary tiles and the sleep-range chart. They update on every change.
+4. Click Copy to take the JavaScript snippet built from your exact numbers.
 
 ## Features
 
@@ -26,9 +31,26 @@ This page computes the delay schedule for a single client. It deliberately model
 
 The raw delay for attempt n is `min(cap, base * multiplier^(n-1))`. The jitter strategy then decides the actual sleep: none uses the raw delay as-is, full jitter picks a random value between 0 and raw, equal jitter picks `raw/2` plus a random value up to `raw/2`, and decorrelated jitter picks `min(cap, random(base, prev_sleep * 3))` seeded with the base delay. The table and chart show the analytic min, max, and mean for each attempt (the decorrelated mean is the mean of the capped recursion, an approximation), and the worst-case total assumes every attempt sleeps its maximum. Everything is computed in plain JavaScript in the page.
 
+## Why this exists
+
+Backoff settings are easy to pick by feel, and the total wait only shows up once a dependency is down. This page shows the whole retry schedule before you ship it. It is one HTML file with no tracking and no network calls. MIT licensed.
+
 ## Privacy
 
 Everything runs in your browser. Nothing is uploaded or sent anywhere; there are no analytics, no cookies, and no network requests. The only thing stored locally is your theme preference.
+
+## Run locally
+
+```bash
+git clone https://github.com/0xelitesystem/retry-backoff-calculator
+cd retry-backoff-calculator
+```
+
+Open `index.html` in any browser. Or serve the folder with `python -m http.server 8000` and visit http://localhost:8000/.
+
+## Build
+
+No build step. The whole tool is one `index.html` file with its CSS and JavaScript inline.
 
 ## More
 
